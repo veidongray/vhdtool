@@ -1,2 +1,2 @@
 # vhdtool-linux
-A vhd tool on linux.
+An about vhd and other file for tool on linux.
