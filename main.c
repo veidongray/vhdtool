@@ -157,7 +157,7 @@ int Read_Binary(char * File_Name)
 
     printf("================================\n");
     for (uint64_t addr = 0; addr < size; addr += 16) {
-        printf("%.8X: ", addr);
+        printf("%.8lX: ", addr);
         printf("%.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X | ",
                 buff[addr], buff[addr + 1], buff[addr + 2], buff[addr + 3],
                 buff[addr + 4], buff[addr + 5], buff[addr + 6], buff[addr + 7],
@@ -181,12 +181,12 @@ int Read_Binary(char * File_Name)
 
 int Write_Bin_to_VHD(char * argv_x[])
 {
-    FILE * Bin_File_Point = fopen64(argv_x[2], "rb+");
+    FILE * Bin_File_Point = fopen(argv_x[2], "rb+");
     if (Bin_File_Point == NULL) {
         printf("Bin fopen No!\n");
         return FUNCTION_FAILED;
     }
-    FILE * VHD_File_Point = fopen64(argv_x[3], "rb+");
+    FILE * VHD_File_Point = fopen(argv_x[3], "rb+");
     if (VHD_File_Point == NULL) {
         printf("VHD fopen No!\n");
         return FUNCTION_FAILED;
