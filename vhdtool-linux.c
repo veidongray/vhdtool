@@ -36,7 +36,7 @@ static struct Disk_Geometry_Info {
 #define FUNCTION_FAILED -1
 #define FUNCTION_SUCCESS 0
 #define READ_BINARY_FUNCTION 2
-#define VHD_BLACK_SIZE 512
+#define VHD_BLACK_SIZE 51
 
 static struct stat * VHD_statbuff;
 static struct stat * Bin_statbuff;
@@ -137,7 +137,7 @@ int Read_Binary(char * File_Name)
 {
     FILE *fp = fopen(File_Name, "rb+");
     if (fp == NULL) {
-        printf("Have not file.\n");
+        perror(File_Name);
         return FUNCTION_FAILED;
     }
 
@@ -183,12 +183,12 @@ int Write_Bin_to_VHD(char * argv_x[])
 {
     FILE * Bin_File_Point = fopen(argv_x[2], "rb+");
     if (Bin_File_Point == NULL) {
-        printf("Bin fopen No!\n");
+        perror(argv_x[2]);
         return FUNCTION_FAILED;
     }
     FILE * VHD_File_Point = fopen(argv_x[3], "rb+");
     if (VHD_File_Point == NULL) {
-        printf("VHD fopen No!\n");
+        perror(argv_x[3]);
         return FUNCTION_FAILED;
     }
 
