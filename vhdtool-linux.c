@@ -1,6 +1,3 @@
-#ifndef __VHD_TOOL__
-#define __VHD_TOOL__
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -277,5 +274,3 @@ int Write_Bin_to_VHD(char * argv_x[])
     fclose(Bin_File_Point);
     return FUNCTION_SUCCESS;
 }
-
-#endif // __VHD_TOOL__
