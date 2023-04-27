@@ -9,8 +9,7 @@
 static struct VHD_Hard_Disk_Footer_Format {
     /* Use union to solve the problem of large and small side endianness. */
     union {
-        uint64_t value0;
-        uint64_t value1;
+        uint64_t value[2];
         unsigned char data[16];
     } Unique_Id;
     union {
@@ -176,8 +175,8 @@ int Get_vhd_Footer_Format_Info(FILE * fp, uint32_t footer_offset)
     fread(&vhdff->Disk_Geometry.value, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Disk_Type.value, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Checksum.value, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Unique_Id.value0, sizeof(uint64_t), 1, fp);
-    fread(&vhdff->Unique_Id.value1, sizeof(uint64_t), 1, fp);
+    fread(&vhdff->Unique_Id.value[0], sizeof(uint64_t), 1, fp);
+    fread(&vhdff->Unique_Id.value[1], sizeof(uint64_t), 1, fp);
     for (int i = 0; i < 428; i++) {
         fread(&vhdff->Saved_State_and_Reserved[i], 1, 1, fp);
     }
