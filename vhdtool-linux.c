@@ -8,29 +8,63 @@
 #pragma pack(1)
 static struct VHD_Hard_Disk_Footer_Format {
     /* Use union to solve the problem of large and small side endianness. */
-    uint64_t Unique_Id[2];
-    uint64_t Cookie;
-    uint64_t Original_Size;
+    union {
+        uint64_t value0;
+        uint64_t value1;
+        unsigned char data[16];
+    } Unique_Id;
+    union {
+        uint64_t value;
+        unsigned char data[8];
+    } Cookie;
+    union {
+        uint64_t value;
+        unsigned char data[8];
+    } Original_Size;
     union {
         uint64_t value;
         unsigned char data[8];
     } Current_Size;
-    uint64_t Data_Offset;
-    uint32_t Features;
-    uint32_t File_Format_Version;
-    uint32_t Time_Stamp;
-    uint32_t Creator_Application;
-    uint32_t Creator_Version;
+    union {
+        uint64_t value;
+        unsigned char data[8];
+    } Data_Offset;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } Features;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } File_Format_Version;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } Time_Stamp;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } Creator_Application;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } Creator_Version;
     union {
         uint32_t value;
         unsigned char data[4];
     } Creator_Host_OS;
-    uint32_t Disk_Geometry;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } Disk_Geometry;
     union {
         uint32_t value;
         unsigned char data[4];
     } Disk_Type;
-    uint32_t Checksum;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } Checksum;
     uint8_t Saved_State_and_Reserved[428];
 } *vhdff;
 
@@ -129,20 +163,20 @@ int Get_vhd_Footer_Format_Info(FILE * fp, uint32_t footer_offset)
         printf("Cookie ERROR!\n");
         return FUNCTION_FAILED;
     }
-    fread(&vhdff->Features, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->File_Format_Version, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Data_Offset, sizeof(uint64_t), 1, fp);
-    fread(&vhdff->Time_Stamp, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Creator_Application, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Creator_Version, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->Features.value, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->File_Format_Version.value, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->Data_Offset.value, sizeof(uint64_t), 1, fp);
+    fread(&vhdff->Time_Stamp.value, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->Creator_Application.value, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->Creator_Version.value, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Creator_Host_OS.value, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Original_Size, sizeof(uint64_t), 1, fp);
+    fread(&vhdff->Original_Size.value, sizeof(uint64_t), 1, fp);
     fread(&vhdff->Current_Size.value, sizeof(uint64_t), 1, fp);
-    fread(&vhdff->Disk_Geometry, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->Disk_Geometry.value, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Disk_Type.value, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Checksum, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Unique_Id[0], sizeof(uint64_t), 1, fp);
-    fread(&vhdff->Unique_Id[1], sizeof(uint64_t), 1, fp);
+    fread(&vhdff->Checksum.value, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->Unique_Id.value0, sizeof(uint64_t), 1, fp);
+    fread(&vhdff->Unique_Id.value1, sizeof(uint64_t), 1, fp);
     for (int i = 0; i < 428; i++) {
         fread(&vhdff->Saved_State_and_Reserved[i], 1, 1, fp);
     }
@@ -157,10 +191,10 @@ int Get_vhd_Disk_Geometry_Field_Info(void)
         Disk_Size += vhdff->Current_Size.data[i];
         Disk_Size <<= 8;
     }
-    dgi->Cylinder = (((vhdff->Disk_Geometry & 0xff) << 8)
-                    | ((vhdff->Disk_Geometry & 0xff00) >> 8)) & 0xffff;
-    dgi->Heads = ((vhdff->Disk_Geometry & 0xff0000) >> 16) & 0xff;
-    dgi->Sectors_Per_Track_in_Cylinder = ((vhdff->Disk_Geometry & 0xff000000) >> 24) & 0xff;
+    dgi->Cylinder = (((vhdff->Disk_Geometry.value & 0xff) << 8)
+                    | ((vhdff->Disk_Geometry.value & 0xff00) >> 8)) & 0xffff;
+    dgi->Heads = ((vhdff->Disk_Geometry.value & 0xff0000) >> 16) & 0xff;
+    dgi->Sectors_Per_Track_in_Cylinder = ((vhdff->Disk_Geometry.value & 0xff000000) >> 24) & 0xff;
     printf("Cylinder: %u\nHeads: %u\nSectors per track: %u\n",
            dgi->Cylinder, dgi->Heads, dgi->Sectors_Per_Track_in_Cylinder);
     printf("Host: %s\n", vhdff->Creator_Host_OS.data[0] == 0x57 ? "Win" : "Mac");
@@ -196,7 +230,7 @@ int Read_Binary(char * File_Name)
     printf("================================\n");
     for (uint64_t addr = 0; addr < size; addr += 16) {
         for (i = 0, count = 0; i < 16; i++) {
-            count += buff[addr];
+            count += buff[addr + i];
             count <<= 8;
         }
         if (count) {
@@ -216,7 +250,7 @@ int Read_Binary(char * File_Name)
                 }
             }
         } else if (show_flag) {
-            printf("........\n");
+            printf("........\n\n");
             show_flag = 0;      /* Just show only once*/
             continue;
         } else {
