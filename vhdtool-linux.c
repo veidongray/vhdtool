@@ -95,6 +95,7 @@ static char DiskTypeName[][32] = {
 
 static struct stat * VHD_statbuff;
 static struct stat * Bin_statbuff;
+static struct stat * Red_statbuff;
 
 int Get_vhd_Disk_Geometry_Field_Info(void);
 int Get_vhd_Footer_Format_Info(FILE *, uint32_t);
@@ -204,31 +205,54 @@ int Get_vhd_Disk_Geometry_Field_Info(void)
 
 int Read_Binary(char * File_Name)
 {
+    /*====================Read file data.=======================*/
     int i = 0;
     int show_flag = 0;      /* 0 show ......; 1 don't.*/
     uint64_t count = 0;
+    uint64_t addr = 0;
+    uint64_t addr_index = 0;
+    uint32_t Red_File_Size = 0;
     FILE *fp = fopen(File_Name, "rb+");
     if (fp == NULL) {
         perror(File_Name);
         return FUNCTION_FAILED;
     }
 
+    Red_statbuff = (struct stat *)malloc(sizeof(struct stat));
+    memset((struct stat *)Red_statbuff, 0, sizeof(struct stat));
+    stat(File_Name, Red_statbuff);
+    Red_File_Size = Red_statbuff->st_size;
     unsigned int size = 0;
     printf("File name: %s\n", File_Name);
-    printf("Enter size(1B-%dB):", MAX_READBUFF);
-    scanf("%d", &size);
-    if (size > MAX_READBUFF) {
-        printf("Size is too large.\n");
-        return FUNCTION_FAILED;
+    while (1) {
+        printf("Enter size((min)16B - (max)%dBytes):", MAX_READBUFF);
+        scanf("%d", &size);
+        if (size > MAX_READBUFF) {
+            printf("Size too large, try again.\n");
+            continue;
+        } else if (size < 16) {
+            printf("Size too small, try again.\n");
+            continue;
+        } else {
+            break;
+        }
     }
     fseek(fp, 0, 0);
-
+    if ((size + (16 - (size % 16))) > Red_File_Size) {
+        size -= size % 16;
+        printf("size - size %% 16: %uBytes\n", size);
+    } else {
+        size += (16 - (size % 16));
+        printf("size + size %% 16: %uBytes\n", size);
+    }
     unsigned char * buff = (unsigned char *)malloc(size * sizeof(unsigned char));
     memset((unsigned char *)buff, 0, size);
     fread((unsigned char *)buff, 1, size, fp);
 
-    printf("================================\n");
-    for (uint64_t addr = 0; addr < size; addr += 16) {
+    size /= 16;
+    printf("%s: %uBytes\n", File_Name, Red_File_Size);
+    printf("<----------------------------------->\n");
+    for (addr = 0, addr_index = 0; addr_index < size; addr += 16, addr_index++) {
         for (i = 0, count = 0; i < 16; i++) {
             count += buff[addr + i];
             count <<= 8;
