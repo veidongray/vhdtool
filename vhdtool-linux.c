@@ -7,19 +7,29 @@
 
 #pragma pack(1)
 static struct VHD_Hard_Disk_Footer_Format {
+    /* Use union to solve the problem of large and small side endianness. */
     uint64_t Unique_Id[2];
     uint64_t Cookie;
     uint64_t Original_Size;
-    uint64_t Current_Size;
+    union {
+        uint64_t value;
+        unsigned char data[8];
+    } Current_Size;
     uint64_t Data_Offset;
     uint32_t Features;
     uint32_t File_Format_Version;
     uint32_t Time_Stamp;
     uint32_t Creator_Application;
     uint32_t Creator_Version;
-    uint32_t Creator_Host_OS;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } Creator_Host_OS;
     uint32_t Disk_Geometry;
-    uint32_t Disk_Type;
+    union {
+        uint32_t value;
+        unsigned char data[4];
+    } Disk_Type;
     uint32_t Checksum;
     uint8_t Saved_State_and_Reserved[428];
 } *vhdff;
@@ -30,11 +40,24 @@ static struct Disk_Geometry_Info {
     uint8_t Sectors_Per_Track_in_Cylinder;
 } *dgi;
 #pragma pack()
+
 #define FOOTER_FORMAT_SIZE 512
+#define PERSECTSIZE 512
 #define FUNCTION_FAILED -1
 #define FUNCTION_SUCCESS 0
 #define READ_BINARY_FUNCTION 2
 #define VHD_BLACK_SIZE 51
+#define MAX_READBUFF 1024 * 1024 * 1024 /* 1GB */
+
+static char DiskTypeName[][32] = {
+    "None",
+    "Reserved0(deprecated)",
+    "Fixed Hard Disk",
+    "Dynamic Hard Disk",
+    "Differencing Hard Disk",
+    "Reserved1(deprecated)",
+    "Reserved2(deprecated)"
+};
 
 static struct stat * VHD_statbuff;
 static struct stat * Bin_statbuff;
@@ -112,11 +135,11 @@ int Get_vhd_Footer_Format_Info(FILE * fp, uint32_t footer_offset)
     fread(&vhdff->Time_Stamp, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Creator_Application, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Creator_Version, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Creator_Host_OS, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->Creator_Host_OS.value, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Original_Size, sizeof(uint64_t), 1, fp);
-    fread(&vhdff->Current_Size, sizeof(uint64_t), 1, fp);
+    fread(&vhdff->Current_Size.value, sizeof(uint64_t), 1, fp);
     fread(&vhdff->Disk_Geometry, sizeof(uint32_t), 1, fp);
-    fread(&vhdff->Disk_Type, sizeof(uint32_t), 1, fp);
+    fread(&vhdff->Disk_Type.value, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Checksum, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Unique_Id[0], sizeof(uint64_t), 1, fp);
     fread(&vhdff->Unique_Id[1], sizeof(uint64_t), 1, fp);
@@ -128,17 +151,28 @@ int Get_vhd_Footer_Format_Info(FILE * fp, uint32_t footer_offset)
 
 int Get_vhd_Disk_Geometry_Field_Info(void)
 {
+    int i = 0;
+    uint64_t Disk_Size = 0;
+    for (i = 0; i < 8; i++) {
+        Disk_Size += vhdff->Current_Size.data[i];
+        Disk_Size <<= 8;
+    }
     dgi->Cylinder = (((vhdff->Disk_Geometry & 0xff) << 8)
                     | ((vhdff->Disk_Geometry & 0xff00) >> 8)) & 0xffff;
     dgi->Heads = ((vhdff->Disk_Geometry & 0xff0000) >> 16) & 0xff;
     dgi->Sectors_Per_Track_in_Cylinder = ((vhdff->Disk_Geometry & 0xff000000) >> 24) & 0xff;
     printf("Cylinder: %u\nHeads: %u\nSectors per track: %u\n",
            dgi->Cylinder, dgi->Heads, dgi->Sectors_Per_Track_in_Cylinder);
+    printf("Host: %s\n", vhdff->Creator_Host_OS.data[0] == 0x57 ? "Win" : "Mac");
+    printf("Disk type: %s\n", DiskTypeName[vhdff->Disk_Type.data[3]]);
     return FUNCTION_SUCCESS;
 }
 
 int Read_Binary(char * File_Name)
 {
+    int i = 0;
+    int show_flag = 0;      /* 0 show ......; 1 don't.*/
+    uint64_t count = 0;
     FILE *fp = fopen(File_Name, "rb+");
     if (fp == NULL) {
         perror(File_Name);
@@ -147,9 +181,9 @@ int Read_Binary(char * File_Name)
 
     unsigned int size = 0;
     printf("File name: %s\n", File_Name);
-    printf("Enter size(4B~1,073,741,824B):");
+    printf("Enter size(1B-%dB):", MAX_READBUFF);
     scanf("%d", &size);
-    if (size > 1073741824) {
+    if (size > MAX_READBUFF) {
         printf("Size is too large.\n");
         return FUNCTION_FAILED;
     }
@@ -161,19 +195,32 @@ int Read_Binary(char * File_Name)
 
     printf("================================\n");
     for (uint64_t addr = 0; addr < size; addr += 16) {
-        printf("%.8lX: ", addr);
-        printf("%.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X | ",
-                buff[addr], buff[addr + 1], buff[addr + 2], buff[addr + 3],
-                buff[addr + 4], buff[addr + 5], buff[addr + 6], buff[addr + 7],
-                buff[addr + 8], buff[addr + 9], buff[addr + 10], buff[addr + 11],
-                buff[addr + 12], buff[addr + 13], buff[addr + 14], buff[addr + 15]);
-        for (int i = addr; i < (addr + 16); i++) {
-            if (buff[i] < '~' && buff[i] > ' ') {
-                printf("%c", buff[i]);
+        for (i = 0, count = 0; i < 16; i++) {
+            count += buff[addr];
+            count <<= 8;
+        }
+        if (count) {
+            show_flag = 1;      /* If next count value is zero then show ........*/
+            printf("%.8lX: ", addr);
+            printf("%.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X | ",
+                    buff[addr], buff[addr + 1], buff[addr + 2], buff[addr + 3],
+                    buff[addr + 4], buff[addr + 5], buff[addr + 6], buff[addr + 7],
+                    buff[addr + 8], buff[addr + 9], buff[addr + 10], buff[addr + 11],
+                    buff[addr + 12], buff[addr + 13], buff[addr + 14], buff[addr + 15]);
+            for (int i = addr; i < (addr + 16); i++) {
+                if (buff[i] < '~' && buff[i] > ' ') {
+                    printf("%c", buff[i]);
+                }
+                else {
+                    printf(".");
+                }
             }
-            else {
-                printf(".");
-            }
+        } else if (show_flag) {
+            printf("........\n");
+            show_flag = 0;      /* Just show only once*/
+            continue;
+        } else {
+            continue;
         }
         printf("\n");
     }
@@ -203,13 +250,14 @@ int Write_Bin_to_VHD(char * argv_x[])
     uint32_t VHD_File_Size = 0;
     uint32_t Bin_File_Size = 0;
     uint32_t Start_Sector = 0;
-    uint32_t From_BIN_Input_Buff[SHRT_MAX];
+    char *From_BIN_Input_Buff = NULL;
     uint32_t All_Sector_Number = 0;
 
     dgi = (struct Disk_Geometry_Info *)malloc(sizeof(struct Disk_Geometry_Info));
     vhdff = (struct VHD_Hard_Disk_Footer_Format *)malloc(sizeof(struct VHD_Hard_Disk_Footer_Format));
     VHD_statbuff = (struct stat *)malloc(sizeof(struct stat));
     Bin_statbuff = (struct stat *)malloc(sizeof(struct stat));
+    From_BIN_Input_Buff = (char *)malloc(SHRT_MAX * sizeof(char));
     memset(dgi, 0, sizeof(struct Disk_Geometry_Info));
     memset((struct VHD_Hard_Disk_Footer_Format *)vhdff, 0, sizeof(struct VHD_Hard_Disk_Footer_Format));
     memset((struct stat *)VHD_statbuff, 0, sizeof(struct stat));
@@ -227,15 +275,7 @@ int Write_Bin_to_VHD(char * argv_x[])
     // get vhd footer format info.
     ret = Get_vhd_Footer_Format_Info(VHD_File_Point, Hard_Disk_Footer_Format_Start);
     if (ret == FUNCTION_FAILED) {
-        fseek(Bin_File_Point, 0, 0);
-        fseek(VHD_File_Point, 0, 0);
-        free(dgi);
-        free(VHD_statbuff);
-        free(vhdff);
-        free(Bin_statbuff);
-        fclose(VHD_File_Point);
-        fclose(Bin_File_Point);
-        return ret;
+        goto fail;
     }
 
     // back to file header.
@@ -243,8 +283,9 @@ int Write_Bin_to_VHD(char * argv_x[])
 
     // get vhd Disk Geometry field.
     Get_vhd_Disk_Geometry_Field_Info();
-    All_Sector_Number = Hard_Disk_Footer_Format_Start / FOOTER_FORMAT_SIZE;
+    All_Sector_Number = Hard_Disk_Footer_Format_Start / PERSECTSIZE;
     printf("All sectors: %u\n", All_Sector_Number);
+    printf("Disk size: %uMB\n", VHD_File_Size / 1024 / 1024);
 
     // enter start sector.
     printf("Enter start sector(1~%u): ", All_Sector_Number);
@@ -264,18 +305,23 @@ int Write_Bin_to_VHD(char * argv_x[])
     //per write 1024bytes.
     printf("Writing......\n");
     for (int j = 0; j < Bin_File_Size; j++) {
-        From_BIN_Input_Buff[j] = fgetc(Bin_File_Point);
-        fputc(From_BIN_Input_Buff[j], VHD_File_Point);
+        From_BIN_Input_Buff[j] = (char)fgetc(Bin_File_Point);
+        fputc((int)From_BIN_Input_Buff[j], VHD_File_Point);
     }
     printf("Done!\n");
 
+fail:
     fseek(Bin_File_Point, 0, 0);
     fseek(VHD_File_Point, 0, 0);
     free(dgi);
+    free(From_BIN_Input_Buff);
     free(VHD_statbuff);
     free(vhdff);
     free(Bin_statbuff);
     fclose(VHD_File_Point);
     fclose(Bin_File_Point);
+    if (ret == FUNCTION_FAILED) {
+        return FUNCTION_FAILED;
+    }
     return FUNCTION_SUCCESS;
 }
