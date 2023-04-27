@@ -68,11 +68,11 @@ int Console_Parameter_Check(int argc_t, char * argv_t[])
         printf("Have not option.\n");
         return FUNCTION_FAILED;
     }
-    if (strncmp(argv_t[1], "-x", 2) && strncmp(argv_t[1], "-h", 2) && strncmp(argv_t[1], "-v", 2)) {
+    if (strncmp(argv_t[1], "-w", 2) && strncmp(argv_t[1], "-h", 2) && strncmp(argv_t[1], "-r", 2)) {
         printf("Error options!(Try to use -h)\n");
         return FUNCTION_FAILED;
     }
-    else if (!strncmp(argv_t[1], "-v", 2)) {
+    else if (!strncmp(argv_t[1], "-r", 2)) {
         if (Read_Binary(argv_t[2]) == READ_BINARY_FUNCTION) {
             // Read_Binary() success.
             return READ_BINARY_FUNCTION;
@@ -81,7 +81,7 @@ int Console_Parameter_Check(int argc_t, char * argv_t[])
             return FUNCTION_FAILED;
         }
     }
-    else if (!strncmp(argv_t[1], "-x", 2)) {
+    else if (!strncmp(argv_t[1], "-w", 2)) {
         if (!(Write_Bin_to_VHD(argv_t) == FUNCTION_SUCCESS)) {
             return FUNCTION_FAILED;
         }
@@ -90,8 +90,8 @@ int Console_Parameter_Check(int argc_t, char * argv_t[])
         }
     }
     else if (!strncmp(argv_t[1], "-h", 2)) {
-        printf("%s -x [.Bin file] [.VHD file]\n", argv_t[0]);
-        printf("%s -v [file name]\n", argv_t[0]);
+        printf("%s -w [.Bin file] [.VHD file]\n", argv_t[0]);
+        printf("%s -r [file name]\n", argv_t[0]);
         return FUNCTION_SUCCESS;
     }
 
