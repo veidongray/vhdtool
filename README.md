@@ -1,4 +1,4 @@
-# vhdtool-linux
+# vhdtool
 An about vhd and other file for tool on linux.  
 `vhdtool-linux` version is latest maintained code.  
 `vhdtool-windows` version is no longer maintained.  
