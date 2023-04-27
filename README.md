@@ -1,13 +1,13 @@
 # vhdtool-linux
 An about vhd and other file for tool on linux.  
-**vhdtool-linux** version is latest maintained code.  
-**vhdtool-windows** version is no longer maintained.  
+`vhdtool-linux` version is latest maintained code.  
+`vhdtool-windows` version is no longer maintained.  
 
 # Build:
-`make`
+`$ make`
 # Clean:
-`make clean`
+`$ make clean`
 # Usege:
-`vhdtool -h`  
-`vhdtool -w [.Bin file] [.VHD file]`  
-`vhdtool -r [file name]`  
+`$ vhdtool -h`  
+`$ vhdtool -w [.Bin file] [.VHD file]`  
+`$ vhdtool -r [file name]`  
