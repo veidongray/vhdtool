@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 #pragma pack(1)
 static struct VHD_Hard_Disk_Footer_Format {
@@ -95,10 +96,16 @@ int Console_Parameter_Check(int argc_t, char * argv_t[])
     return FUNCTION_SUCCESS;
 }
 
-int Get_vhd_Footer_Format_Info(FILE * fp, uint32_t HDFFS)
+int Get_vhd_Footer_Format_Info(FILE * fp, uint32_t footer_offset)
 {
-    fseek(fp, HDFFS, 0);
+    fseek(fp, footer_offset, 0);
     fread(&vhdff->Cookie, sizeof(uint64_t), 1, fp);
+    if (strncmp((const char *)&vhdff->Cookie, "conectix", 8)) {
+        /* If the Cookie's value is not "conectix" */
+        /* Then out error and return. */
+        printf("Cookie ERROR!\n");
+        return FUNCTION_FAILED;
+    }
     fread(&vhdff->Features, sizeof(uint32_t), 1, fp);
     fread(&vhdff->File_Format_Version, sizeof(uint32_t), 1, fp);
     fread(&vhdff->Data_Offset, sizeof(uint64_t), 1, fp);
@@ -178,6 +185,7 @@ int Read_Binary(char * File_Name)
 
 int Write_Bin_to_VHD(char * argv_x[])
 {
+    int ret = FUNCTION_SUCCESS;
     FILE * Bin_File_Point = fopen(argv_x[2], "rb+");
     if (Bin_File_Point == NULL) {
         perror(argv_x[2]);
@@ -195,7 +203,7 @@ int Write_Bin_to_VHD(char * argv_x[])
     uint32_t VHD_File_Size = 0;
     uint32_t Bin_File_Size = 0;
     uint32_t Start_Sector = 0;
-    uint32_t From_BIN_Input_Buff[1024];
+    uint32_t From_BIN_Input_Buff[SHRT_MAX];
     uint32_t All_Sector_Number = 0;
 
     dgi = (struct Disk_Geometry_Info *)malloc(sizeof(struct Disk_Geometry_Info));
@@ -217,7 +225,18 @@ int Write_Bin_to_VHD(char * argv_x[])
     Hard_Disk_Footer_Format_Start = VHD_File_Size - FOOTER_FORMAT_SIZE;
 
     // get vhd footer format info.
-    Get_vhd_Footer_Format_Info(VHD_File_Point, Hard_Disk_Footer_Format_Start);
+    ret = Get_vhd_Footer_Format_Info(VHD_File_Point, Hard_Disk_Footer_Format_Start);
+    if (ret == FUNCTION_FAILED) {
+        fseek(Bin_File_Point, 0, 0);
+        fseek(VHD_File_Point, 0, 0);
+        free(dgi);
+        free(VHD_statbuff);
+        free(vhdff);
+        free(Bin_statbuff);
+        fclose(VHD_File_Point);
+        fclose(Bin_File_Point);
+        return ret;
+    }
 
     // back to file header.
     fseek(VHD_File_Point, 0, 0);
@@ -244,23 +263,9 @@ int Write_Bin_to_VHD(char * argv_x[])
     //write from .bin to input to VHD.
     //per write 1024bytes.
     printf("Writing......\n");
-    if (Bin_File_Size >= 1024) {
-        for (int i = 0; i < (Bin_File_Size % 1024) - 1024; i++) {
-            for (int j = 0; j < 1024; j++) {
-                From_BIN_Input_Buff[j] = fgetc(Bin_File_Point);
-                fputc(From_BIN_Input_Buff[j], VHD_File_Point);
-            }
-        }
-        for (int index = 0; index < Bin_File_Size - (Bin_File_Size % 1024); index++) {
-            From_BIN_Input_Buff[index] = fgetc(Bin_File_Point);
-            fputc(From_BIN_Input_Buff[index], VHD_File_Point);
-        }
-    }
-    else {
-        for (int j = 0; j < Bin_File_Size; j++) {
-            From_BIN_Input_Buff[j] = fgetc(Bin_File_Point);
-            fputc(From_BIN_Input_Buff[j], VHD_File_Point);
-        }
+    for (int j = 0; j < Bin_File_Size; j++) {
+        From_BIN_Input_Buff[j] = fgetc(Bin_File_Point);
+        fputc(From_BIN_Input_Buff[j], VHD_File_Point);
     }
     printf("Done!\n");
 
