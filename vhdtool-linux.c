@@ -360,12 +360,15 @@ int Write_Bin_to_VHD(char * argv_x[])
 
     //write from .bin to input to VHD.
     //per write 1024bytes.
-    printf("Writing......");
-    for (int j = 0; j < Bin_File_Size; j++) {
-        From_BIN_Input_Buff[j] = (char)fgetc(Bin_File_Point);
-        fputc((int)From_BIN_Input_Buff[j], VHD_File_Point);
+    printf("Writing");
+    for (int i = 0; i < Bin_File_Size; i++) {
+        From_BIN_Input_Buff[i] = (char)fgetc(Bin_File_Point);
+        fputc((int)From_BIN_Input_Buff[i], VHD_File_Point);
+        if (i % (Bin_File_Size / 10) == 0) {
+            putchar('.');
+        }
     }
-    printf("...Done!\n");
+    printf("Done!\n");
 
 fail:
     fseek(Bin_File_Point, 0, 0);
