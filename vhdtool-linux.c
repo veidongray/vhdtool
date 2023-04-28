@@ -5,7 +5,6 @@
 #include <sys/stat.h>
 #include <limits.h>
 
-#pragma pack(1)
 static struct VHD_Hard_Disk_Footer_Format {
     /* Use union to solve the problem of large and small side endianness. */
     union {
@@ -72,7 +71,6 @@ static struct Disk_Geometry_Info {
     uint8_t Heads;
     uint8_t Sectors_Per_Track_in_Cylinder;
 } *dgi;
-#pragma pack()
 
 #define FOOTER_FORMAT_SIZE 512
 #define PERSECTSIZE 512
@@ -289,6 +287,7 @@ int Read_Binary(char * File_Name)
 
 int Write_Bin_to_VHD(char * argv_x[])
 {
+    int i = 0, j = 0;
     int ret = FUNCTION_SUCCESS;
     FILE * Bin_File_Point = fopen(argv_x[2], "rb+");
     if (Bin_File_Point == NULL) {
@@ -360,15 +359,16 @@ int Write_Bin_to_VHD(char * argv_x[])
 
     //write from .bin to input to VHD.
     //per write 1024bytes.
-    printf("Writing");
-    for (int i = 0; i < Bin_File_Size; i++) {
+    printf("[");
+    for (i = 0, j = 0; i < Bin_File_Size; i++) {
         From_BIN_Input_Buff[i] = (char)fgetc(Bin_File_Point);
         fputc((int)From_BIN_Input_Buff[i], VHD_File_Point);
         if (i % (Bin_File_Size / 10) == 0) {
-            putchar('.');
+            printf("_%d%%", j);
+            j += 10;
         }
     }
-    printf("Done!\n");
+    printf("] Done!\n");
 
 fail:
     fseek(Bin_File_Point, 0, 0);
