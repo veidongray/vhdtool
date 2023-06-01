@@ -220,6 +220,7 @@ int Read_Binary(char * File_Name)
     stat(File_Name, Red_statbuff);
     Red_File_Size = Red_statbuff->st_size;
     unsigned int size = 0;
+    unsigned int temp_size = 0;
     printf("File name: %s\n", File_Name);
     while (1) {
         printf("Enter size((min)16B - (max)%dBytes):", MAX_READBUFF);
@@ -235,6 +236,7 @@ int Read_Binary(char * File_Name)
         }
     }
     fseek(fp, 0, 0);
+    /*
     if ((size + (16 - (size % 16))) > Red_File_Size) {
         size -= size % 16;
         printf("size - size %% 16: %uBytes\n", size);
@@ -242,14 +244,15 @@ int Read_Binary(char * File_Name)
         size += (16 - (size % 16));
         printf("size + size %% 16: %uBytes\n", size);
     }
+    */
     unsigned char * buff = (unsigned char *)malloc(size * sizeof(unsigned char));
     memset((unsigned char *)buff, 0, size);
     fread((unsigned char *)buff, 1, size, fp);
 
-    size /= 16;
+    temp_size = size / 16;
     printf("%s: %uBytes\n", File_Name, Red_File_Size);
     printf("<----------------------------------->\n");
-    for (addr = 0, addr_index = 0; addr_index < size; addr += 16, addr_index++) {
+    for (addr = 0, addr_index = 0; addr_index < temp_size; addr += 16, addr_index++) {
         for (i = 0, count = 0; i < 16; i++) {
             count += buff[addr + i];
             count <<= 8;
@@ -279,6 +282,33 @@ int Read_Binary(char * File_Name)
         }
         printf("\n");
     }
+
+    /* Output the remaining characters after the pair. */
+    temp_size = (size % 16) + addr;
+    printf("%.8lX: ", addr);
+    for (; addr < temp_size; addr++) {
+        printf("%.2X ", buff[addr]);
+        if ((addr + 1) % 8 == 0) {
+            printf(" ");
+        }
+    }
+    for (i = 0; i < 16 - (temp_size % 16); i++) {
+        printf("   ");
+    }
+    printf("| ");
+
+    for (i = addr - (size % 16); i < temp_size; i++) {
+        if (buff[i] < '~' && buff[i] > ' ') {
+            printf("%c", buff[i]);
+        }
+        else {
+            printf(".");
+        }
+    }
+    for (i = 0; i < 16 - (temp_size % 16); i++) {
+        printf(" ");
+    }
+    printf("\n");
 
     free(buff);
     fclose(fp);
