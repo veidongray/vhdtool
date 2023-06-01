@@ -78,7 +78,6 @@ static struct Disk_Geometry_Info {
 #define FUNCTION_SUCCESS 0
 #define READ_BINARY_FUNCTION 2
 #define VHD_BLACK_SIZE 51
-#define MAX_READBUFF 1024 * 1024 * 1024 /* 1GB */
 
 static char DiskTypeName[][32] = {
     "None",
@@ -222,10 +221,11 @@ int Read_Binary(char * File_Name)
     unsigned int size = 0;
     unsigned int temp_size = 0;
     printf("File name: %s\n", File_Name);
+    printf("%s: %uBytes\n", File_Name, Red_File_Size);
     while (1) {
-        printf("Enter size((min)16B - (max)%dBytes):", MAX_READBUFF);
+        printf("Enter size((MIN)16B - (MAX)%dBytes):", Red_File_Size);
         scanf("%d", &size);
-        if (size > MAX_READBUFF) {
+        if (size > Red_File_Size) {
             printf("Size too large, try again.\n");
             continue;
         } else if (size < 16) {
@@ -250,7 +250,6 @@ int Read_Binary(char * File_Name)
     fread((unsigned char *)buff, 1, size, fp);
 
     temp_size = size / 16;
-    printf("%s: %uBytes\n", File_Name, Red_File_Size);
     printf("<----------------------------------->\n");
     for (addr = 0, addr_index = 0; addr_index < temp_size; addr += 16, addr_index++) {
         for (i = 0, count = 0; i < 16; i++) {
@@ -283,32 +282,34 @@ int Read_Binary(char * File_Name)
         printf("\n");
     }
 
-    /* Output the remaining characters after the pair. */
-    temp_size = (size % 16) + addr;
-    printf("%.8lX: ", addr);
-    for (; addr < temp_size; addr++) {
-        printf("%.2X ", buff[addr]);
-        if ((addr + 1) % 8 == 0) {
+    if (size % 16) {
+        /* Output the remaining characters after the pair. */
+        temp_size = (size % 16) + addr;
+        printf("%.8lX: ", addr);
+        for (; addr < temp_size; addr++) {
+            printf("%.2X ", buff[addr]);
+            if ((addr + 1) % 8 == 0) {
+                printf(" ");
+            }
+        }
+        for (i = 0; i < 16 - (temp_size % 16); i++) {
+            printf("   ");
+        }
+        printf("| ");
+
+        for (i = addr - (size % 16); i < temp_size; i++) {
+            if (buff[i] < '~' && buff[i] > ' ') {
+                printf("%c", buff[i]);
+            }
+            else {
+                printf(".");
+            }
+        }
+        for (i = 0; i < 16 - (temp_size % 16); i++) {
             printf(" ");
         }
+        printf("\n");
     }
-    for (i = 0; i < 16 - (temp_size % 16); i++) {
-        printf("   ");
-    }
-    printf("| ");
-
-    for (i = addr - (size % 16); i < temp_size; i++) {
-        if (buff[i] < '~' && buff[i] > ' ') {
-            printf("%c", buff[i]);
-        }
-        else {
-            printf(".");
-        }
-    }
-    for (i = 0; i < 16 - (temp_size % 16); i++) {
-        printf(" ");
-    }
-    printf("\n");
 
     free(buff);
     fclose(fp);
