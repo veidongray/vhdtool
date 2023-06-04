@@ -239,7 +239,7 @@ int Write_Bin_to_VHD(char * argv_x[])
         printf("Fseek bin error!\n");
         return FUNCTION_FAILED;
     }
-    if (fseek(VHD_File_Point, (Start_Sector * VHD_BLACK_SIZE) - VHD_BLACK_SIZE, 0)) {
+    if (fseek(VHD_File_Point, (Start_Sector * VHD_BLOCK_SIZE) - VHD_BLOCK_SIZE, 0)) {
         printf("Fseek vhd error!\n");
         return FUNCTION_FAILED;
     }
