@@ -36,7 +36,7 @@ static struct Disk_Geometry_Info {
 #define FUNCTION_FAILED -1
 #define FUNCTION_SUCCESS 0
 #define READ_BINARY_FUNCTION 2
-#define VHD_BLACK_SIZE 512
+#define VHD_BLOCK_SIZE 512
 
 static struct stat * VHD_statbuff;
 static struct stat * Bin_statbuff;

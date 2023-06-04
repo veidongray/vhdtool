@@ -1,8 +1,23 @@
 CC := gcc
 CCFLAGS := -Wall
-SRC := vhdtool-linux.c
+SRCLINUX := vhdtool-linux.c
+SRCWIN := vhdtool-windows.c
 
-vhdtool:
-	$(CC) $(CCFLAGS) $(SRC) -o $@
-clean:
-	rm vhdtool
+vhdtool-all:
+	$(CC) $(CCFLAGS) $(SRCLINUX) -o vhdtool-linux
+	$(CC) $(CCFLAGS) $(SRCWIN) -o vhdtool-windows
+
+vhdtool-linux:
+	$(CC) $(CCFLAGS) $(SRCLINUX) -o $@
+
+vhdtool-windows:
+	$(CC) $(CCFLAGS) $(SRCWIN) -o $@
+
+clean-all:
+	rm vhdtool-linux vhdtool-windows
+
+clean-linux:
+	rm vhdtool-linux
+
+clean-windows:
+	rm vhdtool-windows
