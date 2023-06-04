@@ -5,10 +5,10 @@ Only fixed-size VHD files are currently supported, dynamic size writes are still
 `vhdtool-windows` version is no longer maintained.  
 
 # Build:
-`$ make`
+`$ make vhdtool-[all or linux or windows]`
 # Clean:
-`$ make clean`
+`$ make clean-[all or linux or windows]`
 # Usege:
-`$ vhdtool -h`  
-`$ vhdtool -w [.Bin file] [.VHD file]`  
-`$ vhdtool -r [file name]`  
+`$ vhdtool-linux -h`  
+`$ vhdtool-linux -w [.Bin file] [.VHD file]`  
+`$ vhdtool-linux -r [file name]`  
