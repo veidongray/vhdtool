@@ -388,8 +388,7 @@ int Write_Bin_to_VHD(char * argv_x[])
         return FUNCTION_FAILED;
     }
 
-    //write from .bin to input to VHD.
-    //per write 1024bytes.
+    //write from .bin to VHD.
     printf("[");
     for (i = 0, j = 0; i < Bin_File_Size; i++) {
         From_BIN_Input_Buff[i] = (char)fgetc(Bin_File_Point);
