@@ -1,6 +1,3 @@
-//#ifndef __VHD_TOOL__
-//#define __VHD_TOOL__
-//
 //#include <stdio.h>
 //#include <stdlib.h>
 //#include <stdint.h>
@@ -389,4 +386,3 @@
 //	return FUNCTION_SUCCESS;
 //}
 //
-//#endif // __VHD_TOOL__
